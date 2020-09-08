@@ -1,0 +1,46 @@
+<template>
+  <div class="hello">
+    <h1>{{ msg }}</h1>
+
+  </div>
+</template>
+
+<script>
+
+const Mousetrap = require('mousetrap');
+
+export default {
+  name: 'Dialog',
+  props: {
+    msg: String,
+  },
+  mounted() {
+    this.init();
+  },
+  methods: {
+    init() {
+      Mousetrap.bind('4', () => { console.log('4'); });
+      Mousetrap.bind('?', () => { console.log('show shortcuts!'); });
+      Mousetrap.bind('esc', () => { console.log('escape'); }, 'keyup');
+    },
+  },
+};
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped lang="scss">
+h3 {
+  margin: 40px 0 0;
+}
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+li {
+  display: inline-block;
+  margin: 0 10px;
+}
+a {
+  color: #42b983;
+}
+</style>
