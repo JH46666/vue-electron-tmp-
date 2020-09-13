@@ -1,11 +1,22 @@
 import {
-  app, protocol, BrowserWindow, Menu,
+  app, protocol, BrowserWindow, Menu, shell, globalShortcut, Tray, net, crashReporter, ipcMain,
 } from 'electron';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
-import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer';
+
+const log = require('electron-log');
+
+log.error('error');
+log.warn('warn');
+log.info('info');
+log.verbose('verbose');
+log.debug('debug');
+log.silly('silly');
+
+const path = require('path');
+
+const staticPath = path.normalize(`${__dirname}/../public/`);
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
@@ -18,14 +29,15 @@ protocol.registerSchemesAsPrivileged([
 function createWindow() {
   // Create the browser window.
   win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1000,
+    height: 800,
     frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
+      webSecurity: false,
     },
   });
 
@@ -33,31 +45,97 @@ function createWindow() {
     // Load the url of the dev server if in development mode
     win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
     console.log('process.env.WEBPACK_DEV_SERVER_URL: ', process.env.WEBPACK_DEV_SERVER_URL);
-    const templateArr = [{
-      label: '菜单1',
-      submenu: [{ label: '菜单1-1' }, { label: '菜单1-2' }],
-    },
-    {
-      label: '菜单2',
-      click() {
-        console.log('hello menu');
+    const isMac = process.platform === 'darwin';
+    const template = [
+      {
+        label: '主页',
       },
-    },
-    {
-      label: '菜单3',
-    },
-    {
-      label: '菜单4',
-    }];
+      {
+        label: '技术网站推荐',
+        submenu: [
+          {
+            label: 'Vue.js',
+            click() {
+              // 在浏览器中打开链接
+              shell.openExternal('https://cn.vuejs.org/');
+            },
+            enabled: true,
+          },
+          {
+            type: 'separator',
+          },
+          {
+            label: 'w3school',
+            click() {
+              // 打开新窗口,加载网址，若加载本项目的文件，需要使用win.loadFile('fielPath')
+              win.loadURL('https://www.w3school.com.cn/');
+
+              win.on('close', () => {
+                win = null;
+              });
+            },
+          },
+          {
+            label: '百度',
+            click(menuItem, browserWindow, event) {
+              // 在当前窗口重新加载新内容
+              browserWindow.loadURL('http://www.baidu.com');
+            },
+          },
+        ],
+      },
+      {
+        label: '菜单4',
+        submenu: [
+          {
+            label: 'Vue.js',
+            click() {
+              // 在浏览器中打开链接
+              shell.openExternal('https://cn.vuejs.org/');
+            },
+            enabled: true,
+          },
+        ],
+      },
+      {
+        label: '退出',
+        accelerator: 'ctrl+q', // 快捷键设置
+        role: isMac ? 'close' : 'quit', // 使用系统配置项--退出应用
+      },
+    ];
     if (process.platform === 'darwin') {
-      templateArr.unshift({ label: '' });
+      template.unshift({ label: '' });
     }
-    const menu = Menu.buildFromTemplate(templateArr);
+    const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
+    globalShortcut.register('CommandOrControl+K', () => {
+      console.log('监听键盘');
+    });
+    /*     const appDataPath = app.getPath('appData');
+    console.log(appDataPath); */
 
-    const appDataPath = app.getPath('appData');
-    console.log(appDataPath);
+    /*     const tray = new Tray(path.join(`${__dirname}icon.icns`)); */
 
+    const request = net.request('https://www.cnblogs.com/aggsite/AggStats');
+    request.on('response', (response) => {
+      let html = '';
+      response.on('data', (data) => (html += data));
+      response.on('end', () => console.log(html));
+    });
+    request.end();
+
+    crashReporter.start({
+      productName: 'vue-tem',
+      companyName: 'junyue',
+      submitURL: 'https://baidu.com',
+      uploadToServer: true,
+    });
+    ipcMain.on('msg_render2main', (event, param1, param2) => {
+      console.log('event,param1, param2: ', event.sender, param1, param2);
+      console.log('event,param1, param2: ', param1);
+      console.log('event,param1, param2: ', param2);
+      win.webContents.sender('msg_render2main', param1, param2);
+    });
     if (!process.env.IS_TEST) win.webContents.openDevTools();
   } else {
     createProtocol('app');
@@ -69,6 +147,7 @@ function createWindow() {
     win = null;
   });
 }
+app.allowRendererProcessReuse = false;
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
@@ -94,7 +173,9 @@ app.on('ready', async () => {
   if (isDevelopment && !process.env.IS_TEST) {
     // Install Vue Devtools
     try {
-      await installExtension(VUEJS_DEVTOOLS);
+      // await installExtension(VUEJS_DEVTOOLS);
+      const toolPath = '/Users/sjh/Library/Application Support/Google/Chrome/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd/5.3.3_0';
+      BrowserWindow.addDevToolsExtension(toolPath);
     } catch (e) {
       console.error('Vue Devtools failed to install:', e.toString());
     }

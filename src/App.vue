@@ -28,14 +28,16 @@
         <router-link to="/about">About</router-link>
       </div>
       <div @click="openModel" style="font-caption">点击modal</div>
+      <div @click="openNotification" style="font-caption">点击notification</div>
+      <div @click="openIpcMain" style="font-caption">点击传递消息</div>
       <router-view />
     </div>
   </div>
 </template>
 
 <script>
-const { remote, shell } = require('electron');
-// const clipboard = require('clipboard-files');
+const { remote, ipcRenderer } = require('electron');
+const clipboard = require('clipboard-files');
 
 export default {
   name: 'HelloWorld',
@@ -62,7 +64,12 @@ export default {
     }));
     this.isMaxSize = win.isMaximized;
     this.getState();
-    shell.openExternal('https://www.baidu.com');
+    // shell.openExternal('https://www.baidu.com');
+    ipcRenderer.on('msg_render2main', (event, param1, param2) => {
+      console.log('event,param1, param2: ', event.sender, param1, param2);
+      console.log('event,param1, param2: ', param1);
+      console.log('event,param1, param2: ', param2);
+    });
   },
   methods: {
     close() {
@@ -113,8 +120,8 @@ export default {
         },
       }); */
 
-      // const fileNames = clipboard.readFiles();
-      // console.log('fileNames: ', fileNames);
+      const fileNames = clipboard.readFiles();
+      console.log('fileNames: ', clipboard, fileNames);
 
       const { dialog, app, session } = remote;
       console.log('dialog, app: ', dialog, app, session);
@@ -122,7 +129,7 @@ export default {
         title: '我需要打开一个文件',
         buttonLabel: '按此打开文件',
         defaultPath: app.getPath('pictures'),
-        properties: 'multiSelections',
+        properties: ['multiSelections'],
         filters: [
           { name: '图片', extensions: ['jpg', 'png', 'gif'] },
           { name: '视频', extensions: ['mkv', 'avi', 'mp4'] },
@@ -145,6 +152,21 @@ export default {
 
       // app.clearRecentDocuments('xxx');
       // app.clearRecentDocuments();
+    },
+    openNotification() {
+      const { Notification } = remote;
+      const notification = new Notification({
+        title: '您收到新消息',
+        body: '此为消息正文',
+      });
+      notification.show();
+      notification.on('click', () => {
+        alert('用户点击了系统消息');
+      });
+    },
+    openIpcMain() {
+      console.log(1);
+      ipcRenderer.send('msg_render2main', { name: 'param1' }, { name: 'param2' });
     },
   },
 };
